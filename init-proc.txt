@@ -1,0 +1,6 @@
+python -m venv ssd
+pip install from https://pytorch.org/
+pip install -r requirements.txt
+
+
+
