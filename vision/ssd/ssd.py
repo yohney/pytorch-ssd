@@ -4,6 +4,7 @@ import numpy as np
 from typing import List, Tuple
 import torch.nn.functional as F
 
+from .layer_descriptor import LayerDescriptor
 from ..utils import box_utils
 from collections import namedtuple
 GraphPath = namedtuple("GraphPath", ['s0', 'name', 's1'])  #
@@ -12,7 +13,7 @@ GraphPath = namedtuple("GraphPath", ['s0', 'name', 's1'])  #
 class SSD(nn.Module):
     def __init__(self, num_classes: int, base_net: nn.ModuleList, source_layer_indexes: List[int],
                  extras: nn.ModuleList, classification_headers: nn.ModuleList,
-                 regression_headers: nn.ModuleList, is_test=False, config=None, device=None):
+                 regression_headers: nn.ModuleList, is_test=False, config=None, device=None, convert_to_boxes=True):
         """Compose a SSD model using the given components.
         """
         super(SSD, self).__init__()
@@ -24,7 +25,10 @@ class SSD(nn.Module):
         self.classification_headers = classification_headers
         self.regression_headers = regression_headers
         self.is_test = is_test
+        self.convert_to_boxes = convert_to_boxes
         self.config = config
+        self.calculating_layers = False
+        self.layer_data = []
 
         # register layers in source_layer_indexes by adding them to a module list
         self.source_layer_add_ons = nn.ModuleList([t[1] for t in source_layer_indexes
@@ -36,8 +40,18 @@ class SSD(nn.Module):
         if is_test:
             self.config = config
             self.priors = config.priors.to(self.device)
+
+    def calc_cls_layer_data(self):
+        dummy = torch.randn(1, 3, self.config.image_size, self.config.image_size, device=self.device)
+        self.layer_data = []
+
+        self.calculating_layers = True
+        self.forward(dummy)
+        self.calculating_layers = False
+
+        return self.layer_data
             
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor):
         confidences = []
         locations = []
         start_layer_index = 0
@@ -89,17 +103,24 @@ class SSD(nn.Module):
         
         if self.is_test:
             confidences = F.softmax(confidences, dim=2)
-            boxes = box_utils.convert_locations_to_boxes(
-                locations, self.priors, self.config.center_variance, self.config.size_variance
-            )
-            boxes = box_utils.center_form_to_corner_form(boxes)
-            return confidences, boxes
+            if self.convert_to_boxes:
+                boxes = box_utils.convert_locations_to_boxes(
+                    locations, self.priors, self.config.center_variance, self.config.size_variance
+                )
+                boxes = box_utils.center_form_to_corner_form(boxes)
+                return confidences, boxes
+            else:
+                return confidences, locations
         else:
             return confidences, locations
 
     def compute_header(self, i, x):
         confidence = self.classification_headers[i](x)
         confidence = confidence.permute(0, 2, 3, 1).contiguous()
+
+        if self.calculating_layers:
+            self.layer_data.append(LayerDescriptor(i, confidence.shape[1:3], num_anchors=confidence.shape[-1] / self.num_classes, num_classes=self.num_classes))
+
         confidence = confidence.view(confidence.size(0), -1, self.num_classes)
 
         location = self.regression_headers[i](x)

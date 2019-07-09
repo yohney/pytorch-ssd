@@ -18,7 +18,7 @@ def SeperableConv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=
     )
 
 
-def create_squeezenet_ssd_lite(num_classes, is_test=False):
+def create_squeezenet_ssd_lite(num_classes, is_test=False, convert_to_boxes=True):
     base_net = squeezenet1_1(False).features  # disable dropout layer
 
     source_layer_indexes = [
@@ -71,7 +71,7 @@ def create_squeezenet_ssd_lite(num_classes, is_test=False):
     ])
 
     return SSD(num_classes, base_net, source_layer_indexes,
-               extras, classification_headers, regression_headers, is_test=is_test, config=config)
+               extras, classification_headers, regression_headers, is_test=is_test, config=config, convert_to_boxes=convert_to_boxes)
 
 
 def create_squeezenet_ssd_lite_predictor(net, candidate_size=200, nms_method=None, sigma=0.5, device=torch.device('cpu')):

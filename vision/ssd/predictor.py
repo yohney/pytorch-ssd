@@ -26,6 +26,45 @@ class Predictor:
 
         self.timer = Timer()
 
+    def predict_for_layers(self, layer_data, image, gt_confidences):
+        height, width, _ = image.shape
+        image = self.transform(image)
+        images = image.unsqueeze(0)
+        images = images.to(self.device)
+
+        with torch.no_grad():
+            self.timer.start()
+            confidences, _ = self.net.forward(images)
+            print("Inference time: ", self.timer.end())
+
+        confidences = torch.argmax(confidences[0], dim=-1)
+        pos_mask = gt_confidences > 0
+        bg_mask = gt_confidences == 0
+
+        start = 0
+        end = 0
+        gt_correct = []
+        correct = []
+        miss_class = []
+        fpos = []
+        for l in layer_data:
+            end += int(l.num_anchors * l.shape[0] * l.shape[1])
+
+            c_pred = confidences[start:end]
+            c_gt = gt_confidences[start:end]
+
+            c_pos_mask = pos_mask[start:end]
+            c_bg_mask = bg_mask[start:end]
+
+            gt_correct.append(torch.clamp(c_gt[c_pos_mask], max=1).sum().item())
+            correct.append(torch.eq(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().item())
+            miss_class.append(torch.ne(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().item())
+            fpos.append(torch.clamp(c_pred[c_bg_mask], max=1).sum().item())
+
+            start = end
+    
+        return gt_correct, correct, miss_class, fpos
+
     def predict(self, image, top_k=-1, prob_threshold=None):
         cpu_device = torch.device("cpu")
         height, width, _ = image.shape
