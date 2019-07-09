@@ -56,10 +56,10 @@ class Predictor:
             c_pos_mask = pos_mask[start:end]
             c_bg_mask = bg_mask[start:end]
 
-            gt_correct.append(torch.clamp(c_gt[c_pos_mask], max=1).sum().item())
-            correct.append(torch.eq(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().item())
-            miss_class.append(torch.ne(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().item())
-            fpos.append(torch.clamp(c_pred[c_bg_mask], max=1).sum().item())
+            gt_correct.append(torch.clamp(c_gt[c_pos_mask], max=1).sum().cpu().item())
+            correct.append(torch.eq(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().cpu().item())
+            miss_class.append(torch.ne(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().cpu().item())
+            fpos.append(torch.clamp(c_pred[c_bg_mask], max=1).sum().cpu().item())
 
             start = end
     
