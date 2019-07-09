@@ -31,6 +31,7 @@ class Predictor:
         image = self.transform(image)
         images = image.unsqueeze(0)
         images = images.to(self.device)
+        gt_confidences = gt_confidences.to(self.device)
 
         with torch.no_grad():
             self.timer.start()
