@@ -28,7 +28,6 @@ class Predictor:
 
     def predict_for_layers(self, layer_data, image, gt_confidences):
         height, width, _ = image.shape
-        image = self.transform(image)
         images = image.unsqueeze(0)
         images = images.to(self.device)
         gt_confidences = gt_confidences.to(self.device)
@@ -36,7 +35,7 @@ class Predictor:
         with torch.no_grad():
             self.timer.start()
             confidences, _ = self.net.forward(images)
-            print("Inference time: ", self.timer.end())
+            #print("Inference time: ", self.timer.end())
 
         confidences = torch.argmax(confidences[0], dim=-1)
         pos_mask = gt_confidences > 0

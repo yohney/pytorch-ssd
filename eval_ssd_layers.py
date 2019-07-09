@@ -19,6 +19,7 @@ import time
 import logging
 import sys
 from vision.ssd.mobilenet_v2_ssd_lite import create_mobilenetv2_ssd_lite, create_mobilenetv2_ssd_lite_predictor
+from vision.ssd.data_preprocessing import TestTransform
 
 parser = argparse.ArgumentParser(description="SSD Evaluation per layer - writing down prior boy accuracy on each layer.")
 parser.add_argument('--net', default="vgg16-ssd",
@@ -70,10 +71,12 @@ if __name__ == '__main__':
     target_transform = MatchPrior(config.priors, config.center_variance,
                                   config.size_variance, 0.5)
 
+    test_transform = TestTransform(config.image_size, config.image_mean, config.image_std)
+
     if args.dataset_type == "voc":
-        dataset = VOCDataset(args.dataset, is_test=True, target_transform=target_transform)
+        dataset = VOCDataset(args.dataset, is_test=True, transform=test_transform, target_transform=target_transform)
     elif args.dataset_type == 'open_images':
-        dataset = OpenImagesDataset(args.dataset, dataset_type="test", target_transform=target_transform)
+        dataset = OpenImagesDataset(args.dataset, dataset_type="test", transform=test_transform, target_transform=target_transform)
 
     timer.start("Load Model")
     net.load(args.trained_model)
@@ -103,10 +106,10 @@ if __name__ == '__main__':
     
     start = time.time()
     for i in range(len(dataset)):
-        print("process image", i)
+        #print("process image", i)
         timer.start("Load Image")
         image, boxes, labels = dataset.__getitem__(i)
-        print("Load Image: {:4f} seconds.".format(timer.end("Load Image")))
+        #print("Load Image: {:4f} seconds.".format(timer.end("Load Image")))
         timer.start("Predict")
         gt_correct, correct, miss_class, fpos = predictor.predict_for_layers(cls_layers, image, labels)
         gt_correct_l += gt_correct
@@ -114,9 +117,10 @@ if __name__ == '__main__':
         miss_class_l += miss_class
         fpos_l += fpos
 
-        if i > 0 and i % 10 == 0:
+        report_freq = 100
+        if i > 0 and i % report_freq == 0:
             print("{} / {}".format(i, len(dataset)))
-            print("ETA: {:.2f} min".format((time.time() - start) / 60 / 10 * (len(dataset)-i)))
+            print("ETA: {:.2f} min".format((time.time() - start) / 60 / report_freq * (len(dataset)-i)))
             print("")
             start = time.time()
 
