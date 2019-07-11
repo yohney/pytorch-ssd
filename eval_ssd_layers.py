@@ -82,6 +82,7 @@ if __name__ == '__main__':
     timer.start("Load Model")
     net.load(args.trained_model)
     net = net.to(DEVICE)
+    net.eval()
     print(f'It took {timer.end("Load Model")} seconds to load the model.')
 
     apCalculator = LayerApCalculator(net)
