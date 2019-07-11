@@ -60,7 +60,7 @@ class LayerApCalculator(object):
 
             ls.non_bg_boxes += torch.clamp(c_gt[c_pos_mask], max=1).sum().cpu().item()
             ls.correct += torch.eq(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().cpu().item()
-            ls.miss_class += torch.ne(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().cpu().item()
+            ls.miss_class += torch.ne(c_pred[c_pos_mask], c_gt[c_pos_mask]).sum().cpu().item() + (torch.clamp(c_pred[c_pos_mask], max=1) - 1).sum().cpu().item()
             ls.fpos += torch.clamp(c_pred[c_bg_mask], max=1).sum().cpu().item()
 
             start = end

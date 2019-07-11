@@ -17,3 +17,6 @@ MissClass      0.000000      0.000000      0.000000     1.000000     0.000000   
 Fpos        3034.000000   4137.000000   2175.000000  1412.000000   356.000000  1461.000000
 Prec           0.232406      0.438108      0.535219     0.658135     0.425147     0.807407
 Fpos/img       0.612682      0.835420      0.439216     0.285137     0.071890     0.295032
+
+Eval on ivica PC:
+python eval_ssd_layers.py --net mb1-ssd --dataset D:\Datasets\VOC\2007\test --trained_model models/mb1-ssd-Epoch-199-Loss-2.8889606102653174.pth --label_file models/voc-model-labels.txt
