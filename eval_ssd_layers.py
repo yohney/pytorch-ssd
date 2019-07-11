@@ -3,6 +3,7 @@ from vision.ssd.vgg_ssd import create_vgg_ssd, create_vgg_ssd_predictor
 from vision.ssd.mobilenetv1_ssd import create_mobilenetv1_ssd, create_mobilenetv1_ssd_predictor
 from vision.ssd.mobilenetv1_ssd_lite import create_mobilenetv1_ssd_lite, create_mobilenetv1_ssd_lite_predictor
 from vision.ssd.ssd import MatchPrior
+from vision.ssd.layer_descriptor import LayerApCalculator
 from vision.ssd.squeezenet_ssd_lite import create_squeezenet_ssd_lite, create_squeezenet_ssd_lite_predictor
 from vision.datasets.voc_dataset import VOCDataset
 from vision.datasets.open_images import OpenImagesDataset
@@ -82,27 +83,11 @@ if __name__ == '__main__':
     net.load(args.trained_model)
     net = net.to(DEVICE)
     print(f'It took {timer.end("Load Model")} seconds to load the model.')
-    if args.net == 'vgg16-ssd':
-        predictor = create_vgg_ssd_predictor(net, nms_method=args.nms_method, device=DEVICE)
-    elif args.net == 'mb1-ssd':
-        predictor = create_mobilenetv1_ssd_predictor(net, nms_method=args.nms_method, device=DEVICE)
-    elif args.net == 'mb1-ssd-lite':
-        predictor = create_mobilenetv1_ssd_lite_predictor(net, nms_method=args.nms_method, device=DEVICE)
-    elif args.net == 'sq-ssd-lite':
-        predictor = create_squeezenet_ssd_lite_predictor(net,nms_method=args.nms_method, device=DEVICE)
-    elif args.net == 'mb2-ssd-lite':
-        predictor = create_mobilenetv2_ssd_lite_predictor(net, nms_method=args.nms_method, device=DEVICE)
-    else:
-        logging.fatal("The net type is wrong. It should be one of vgg16-ssd, mb1-ssd and mb1-ssd-lite.")
-        parser.print_help(sys.stderr)
-        sys.exit(1)
 
+    apCalculator = LayerApCalculator(net)
+  
     results = []
-    cls_layers = net.calc_cls_layer_data()
-    gt_correct_l = np.array([0] * len(cls_layers))
-    correct_l = np.array([0] * len(cls_layers))
-    miss_class_l = np.array([0] * len(cls_layers))
-    fpos_l = np.array([0] * len(cls_layers))
+    layer_stats = [l.build_stats() for l in net.calc_cls_layer_data()]
     
     start = time.time()
     for i in range(len(dataset)):
@@ -111,11 +96,7 @@ if __name__ == '__main__':
         image, boxes, labels = dataset.__getitem__(i)
         #print("Load Image: {:4f} seconds.".format(timer.end("Load Image")))
         timer.start("Predict")
-        gt_correct, correct, miss_class, fpos = predictor.predict_for_layers(cls_layers, image, labels)
-        gt_correct_l += gt_correct
-        correct_l += correct
-        miss_class_l += miss_class
-        fpos_l += fpos
+        apCalculator.update_layer_stats(layer_stats, image, labels)
 
         report_freq = 100
         if i > 0 and i % report_freq == 0:
@@ -124,11 +105,10 @@ if __name__ == '__main__':
             print("")
             start = time.time()
 
-    headers = np.array([l.header() for l in cls_layers])
-    # correct_l.insert(0, 'C')
-    # miss_class.insert(0, 'M')
-    # fpos_l.insert(0, 'F')
-    df = pd.DataFrame(data=np.array([gt_correct_l, correct_l, miss_class, fpos_l, correct_l / gt_correct_l, fpos_l / len(dataset)]), 
+    headers = np.array([l.descriptor.header() for l in layer_stats])
+    
+    data = np.array([[l.non_bg_boxes, l.correct, l.miss_class, l.fpos, l.correct/(l.non_bg_boxes + 0.000001), l.fpos/len(dataset)] for l in layer_stats]).T
+    df = pd.DataFrame(data=data, 
         columns=headers, 
         index=['GT', 'OK', 'MissClass', 'Fpos', 'Prec', 'Fpos/img'])
     print("Row 1: Expected hits")

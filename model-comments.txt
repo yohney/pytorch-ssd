@@ -1,3 +1,13 @@
+TODO LIST:
+- print layer stats as part of validation procedure
+- try out near-miss loss
+- simplify mobilenet architecture not to use complicated config
+- automatic prior generation based on network outputs
+- see image and GT boxes with classes
+- try higher resolutions
+- COCO dataset
+- validate COCO on 300x300 and 600x600
+
 Trained on Dodo PC:
 mb1-ssd-Epoch-199-Loss-2.8889606102653174.pth
               0 (19x19)     1 (10x10)       2 (5x5)      3 (3x3)      4 (2x2)      5 (1x1)
