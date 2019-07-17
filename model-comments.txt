@@ -1,5 +1,4 @@
 TODO LIST:
-- print layer stats as part of validation procedure
 - try out near-miss loss
 - simplify mobilenet architecture not to use complicated config
 - automatic prior generation based on network outputs
@@ -20,3 +19,5 @@ Fpos/img       0.612682      0.835420      0.439216     0.285137     0.071890   
 
 Eval on ivica PC:
 python eval_ssd_layers.py --net mb1-ssd --dataset D:\Datasets\VOC\2007\test --trained_model models/mb1-ssd-Epoch-199-Loss-2.8889606102653174.pth --label_file models/voc-model-labels.txt
+Train on ivica PC:
+python train_ssd.py --datasets D:\Datasets\VOC\2007\train D:\Datasets\VOC\2012\train --validation_dataset D:\Datasets\VOC\2007\test --net mb1-ssd --base_net models/mobilenet_v1_with_relu_69_5.pth  --batch_size 24 --num_epochs 200 --scheduler cosine --lr 0.01 --t_max 200 --num_workers 0
