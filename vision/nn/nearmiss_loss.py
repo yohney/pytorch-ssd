@@ -9,9 +9,8 @@ class NearMissLoss(nn.Module):
         super(NearMissLoss, self).__init__()
         self.neg_pos_ratio = neg_pos_ratio
         self.num_classes = num_classes
-        self.cew = torch.ones([num_classes], dtype=torch.float32)
+        self.cew = torch.ones([num_classes], dtype=torch.float32, device=device)
         self.cew[1:] = 2
-        self.cew.to(device)
 
     def get_bg_nearmiss_mask(self, conf, conf_pred, cnt):
         true_neg_mask = conf == 0
