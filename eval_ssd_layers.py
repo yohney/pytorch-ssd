@@ -98,13 +98,12 @@ if __name__ == '__main__':
         timer.start("Predict")
         apCalculator.update_layer_stats(image, labels)
 
-        report_freq = 5
+        report_freq = 100
         if i > 0 and i % report_freq == 0:
             print("{} / {}".format(i, len(dataset)))
             print("ETA: {:.2f} min".format((time.time() - start) / 60 / report_freq * (len(dataset)-i)))
             print("")
             start = time.time()
-            break
 
     apCalculator.print()
 
