@@ -85,10 +85,9 @@ if __name__ == '__main__':
     net.eval()
     print(f'It took {timer.end("Load Model")} seconds to load the model.')
 
-    apCalculator = LayerApCalculator(net)
+    apCalculator = LayerApCalculator(net, title="Evaluation Layer Stats")
   
     results = []
-    layer_stats = [l.build_stats() for l in net.calc_cls_layer_data()]
     
     start = time.time()
     for i in range(len(dataset)):
@@ -97,27 +96,16 @@ if __name__ == '__main__':
         image, boxes, labels = dataset.__getitem__(i)
         #print("Load Image: {:4f} seconds.".format(timer.end("Load Image")))
         timer.start("Predict")
-        apCalculator.update_layer_stats(layer_stats, image, labels)
+        apCalculator.update_layer_stats(image, labels)
 
-        report_freq = 100
+        report_freq = 5
         if i > 0 and i % report_freq == 0:
             print("{} / {}".format(i, len(dataset)))
             print("ETA: {:.2f} min".format((time.time() - start) / 60 / report_freq * (len(dataset)-i)))
             print("")
             start = time.time()
+            break
 
-    headers = np.array([l.descriptor.header() for l in layer_stats])
-    
-    data = np.array([[l.non_bg_boxes, l.correct, l.miss_class, l.fpos, l.correct/(l.non_bg_boxes + 0.000001), l.fpos/len(dataset)] for l in layer_stats]).T
-    df = pd.DataFrame(data=data, 
-        columns=headers, 
-        index=['GT', 'OK', 'MissClass', 'Fpos', 'Prec', 'Fpos/img'])
-    print("Row 1: Expected hits")
-    print("Row 2: Correct hits")
-    print("Row 3: Missclassification (box correctly not BG, but wrong class)")
-    print("Row 4: False positives (BG classified as box)")
-    print("Row 5: Precision (Correct/Expected)")
-    print("Row 6: False positives (Fpos/image)")
-    print(df)
+    apCalculator.print()
 
 

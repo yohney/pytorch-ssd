@@ -22,6 +22,7 @@ from vision.ssd.config import vgg_ssd_config
 from vision.ssd.config import mobilenetv1_ssd_config
 from vision.ssd.config import squeezenet_ssd_config
 from vision.ssd.data_preprocessing import TrainAugmentation, TestTransform
+from vision.ssd.layer_descriptor import LayerApCalculator
 
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
@@ -112,6 +113,9 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
     running_loss = 0.0
     running_regression_loss = 0.0
     running_classification_loss = 0.0
+
+    apCalculator = LayerApCalculator(net, title='Training Layer Stats - epoch.{:03d}'.format(epoch))
+
     for i, data in enumerate(loader):
         images, boxes, labels = data
         images = images.to(device)
@@ -120,6 +124,7 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
 
         optimizer.zero_grad()
         confidence, locations = net(images)
+        apCalculator.update_layer_stats(images, labels, pre_calc_confidence=confidence)
         regression_loss, classification_loss = criterion(confidence, locations, labels, boxes)  # TODO CHANGE BOXES
         loss = regression_loss + classification_loss
         loss.backward()
@@ -142,6 +147,8 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
             running_regression_loss = 0.0
             running_classification_loss = 0.0
 
+    apCalculator.print()
+
 
 def test(loader, net, criterion, device):
     net.eval()
@@ -149,6 +156,9 @@ def test(loader, net, criterion, device):
     running_regression_loss = 0.0
     running_classification_loss = 0.0
     num = 0
+    
+    apCalculator = LayerApCalculator(net, title='Test Layer Statistics')
+
     for _, data in enumerate(loader):
         images, boxes, labels = data
         images = images.to(device)
@@ -158,6 +168,7 @@ def test(loader, net, criterion, device):
 
         with torch.no_grad():
             confidence, locations = net(images)
+            apCalculator.update_layer_stats(images, labels, pre_calc_confidence=confidence)
             regression_loss, classification_loss = criterion(confidence, locations, labels, boxes)
             loss = regression_loss + classification_loss
 
